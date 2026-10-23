@@ -135,14 +135,15 @@ var msg='Wishing you a day as beautiful as you are 💖';var i=0;
 $('#party').onclick=function(){confetti(120);$('#cake').scrollIntoView({behavior:'smooth',block:'center'})};
 $('#again').onclick=function(){confetti(150)};
 // friend videos (edit the names!)
-var friends=['Friend 1','Friend 2','Friend 3','Friend 4'];
+var friends=['Friend 1','Friend 2','Friend 3','Friend 4','Friend 5','Friend 6','Friend 7'];
 var vw=$('#vids');
 friends.forEach(function(n){var d=document.createElement('div');d.className='vcard';
 var b=document.createElement('button');b.className='vslot';b.innerHTML='🎥<br>Add '+n+'’s video';
 var f=document.createElement('input');f.type='file';f.accept='video/*';f.hidden=true;
 f.onchange=function(){var file=f.files[0];if(!file)return;var v=document.createElement('video');v.controls=true;v.playsInline=true;v.src=URL.createObjectURL(file);d.replaceChild(v,b)};
-var THUMBS={},VSRC={};
-f.onclick=function(e){e.stopPropagation()};if(THUMBS[n]){b.innerHTML='<span class="play">▶</span>';b.style.background='url('+THUMBS[n]+') center/cover'}
+var VSRC={};
+f.onclick=function(e){e.stopPropagation()};var vi=friends.indexOf(n)+1;
+loadImg('media/thumb'+vi+'.jpg',function(u){b.innerHTML='<span class="play">▶</span>';b.style.background='url('+u+') center/cover';VSRC[n]='media/video'+vi+'.mp4'});
 b.onclick=function(){if(VSRC[n]){var v=document.createElement('video');v.controls=true;v.playsInline=true;v.src=VSRC[n];d.replaceChild(v,b);v.play()}else{f.click()}};
 var c=document.createElement('div');c.className='cap';c.textContent='From '+n+' 💌';
 d.appendChild(b);d.appendChild(c);d.appendChild(f);vw.appendChild(d)});
@@ -177,11 +178,14 @@ function syncMusic(){if(!AC)return;var want=musicOn&&vplaying.size===0;if(want&&
 ['play','playing'].forEach(function(ev){document.addEventListener(ev,function(e){if(e.target.tagName==='VIDEO'){vplaying.add(e.target);syncMusic()}},true)});
 ['pause','ended'].forEach(function(ev){document.addEventListener(ev,function(e){if(e.target.tagName==='VIDEO'){vplaying.delete(e.target);syncMusic()}},true)});
 $('#mus').onclick=function(e){e.stopPropagation();if(!AC){startMusic();syncMusic();return}musicOn=!musicOn;this.textContent=musicOn?'🎵':'🔇';syncMusic()};
+function loadImg(u,ok){var im=new Image();im.onload=function(){ok(u)};im.src=u}
 function openLB(s){$('#lbimg').src=s;$('#lb').hidden=false}
 $('#lb').onclick=function(){this.hidden=true};
+loadImg('media/wish.jpg',function(u){var w=$('#wph');w.textContent='';w.style.backgroundImage='url('+u+')';$('#wishframe').onclick=function(){openLB(u)}});
 var p=$('#polas');
-caps.forEach(function(cp){var b=document.createElement('button');b.className='polaroid';
+caps.forEach(function(cp,ix){var b=document.createElement('button');b.className='polaroid';
 b.innerHTML='<div class="ph">📷<br>Add photo</div><div class="cap">'+cp+'</div>';
+loadImg('media/photo'+(ix+1)+'.jpg',function(u){b.dataset.src=u;var ph=b.querySelector('.ph');ph.textContent='';ph.style.backgroundImage='url('+u+')'});
 var f=document.createElement('input');f.type='file';f.accept='image/*';f.hidden=true;
 f.onchange=function(){var file=f.files[0];if(!file)return;var rd=new FileReader();rd.onload=function(){var ph=b.querySelector('.ph');b.dataset.src=rd.result;ph.textContent='';ph.style.backgroundImage='url('+rd.result+')'};rd.readAsDataURL(file)};
 f.onclick=function(e){e.stopPropagation()};b.onclick=function(){if(b.dataset.src){openLB(b.dataset.src)}else{f.click()}};b.appendChild(f);p.appendChild(b)});
