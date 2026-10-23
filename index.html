@@ -60,6 +60,7 @@ h2{font-size:clamp(1.8rem,6vw,2.8rem);color:var(--pink);margin-bottom:28px}
 .vids{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:22px}
 .vcard{background:var(--card);border-radius:22px;padding:12px;box-shadow:0 12px 28px rgba(139,92,246,.2)}
 .vslot{width:100%;aspect-ratio:16/9;border:0;border-radius:14px;background:linear-gradient(135deg,#ffd6e5,#e3d4ff);color:#7a6489;font:inherit;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px}
+#mus{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:60;width:46px;height:46px;border-radius:50%;border:0;font-size:1.3rem;cursor:pointer;background:var(--card);box-shadow:0 6px 18px rgba(139,92,246,.35)}
 #lb{position:fixed;inset:0;z-index:100;background:rgba(10,5,20,.92);display:flex;align-items:center;justify-content:center;padding:16px;cursor:zoom-out}
 #lb[hidden]{display:none}
 #lb img{max-width:100%;max-height:100%;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
@@ -118,6 +119,7 @@ footer{padding:40px 20px 60px;text-align:center;color:var(--soft)}
   <p class="hint">Tap a thumbnail to play the video ▶️</p>
 </section>
 
+<button id="mus" aria-label="Toggle music">🎵</button>
 <div id="lb" hidden><img id="lbimg" alt="Photo"></div>
 <footer>Made with love, just for you 🎂<br><button class="btn" id="again" style="margin-top:16px">More confetti! 🎉</button></footer>
 
@@ -164,6 +166,17 @@ b.innerHTML='<div class="in"><div class="face front">'+r[0]+'&nbsp;<span style="
 b.onclick=function(){b.classList.toggle('on')};c.appendChild(b)});
 // photos
 var caps=['Memory one','Memory two','Memory three','Memory four','Memory five','Memory six','Memory seven'];
+// soft birthday music box (starts on first tap, pauses while a video plays)
+var AC=null,master,musicOn=true,nextT=0,midx=0,BEAT=.62,vplaying=new Set();
+var SEQ=[[392,.75],[392,.25],[440,1],[392,1],[523.25,1],[493.88,2],[392,.75],[392,.25],[440,1],[392,1],[587.33,1],[523.25,2],[392,.75],[392,.25],[783.99,1],[659.25,1],[523.25,1],[493.88,1],[440,1],[698.46,.75],[698.46,.25],[659.25,1],[523.25,1],[587.33,1],[523.25,2],[0,3]];
+function tone(f,t,d){var o=AC.createOscillator(),o2=AC.createOscillator(),g=AC.createGain(),g2=AC.createGain();o.type='sine';o2.type='triangle';o.frequency.value=f;o2.frequency.value=f*2;g2.gain.value=.25;o2.connect(g2);g2.connect(g);o.connect(g);g.connect(master);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.5,t+.02);g.gain.exponentialRampToValueAtTime(.001,t+d*BEAT+.5);o.start(t);o2.start(t);o.stop(t+d*BEAT+.6);o2.stop(t+d*BEAT+.6)}
+function sched(){while(nextT<AC.currentTime+.4){var n=SEQ[midx];if(n[0])tone(n[0],nextT,n[1]);nextT+=n[1]*BEAT;midx=(midx+1)%SEQ.length}}
+function startMusic(){if(AC)return;try{AC=new (window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=.16;master.connect(AC.destination);nextT=AC.currentTime+.1;setInterval(function(){if(AC.state==='running')sched()},120)}catch(e){AC=null}}
+function syncMusic(){if(!AC)return;var want=musicOn&&vplaying.size===0;if(want&&AC.state!=='running')AC.resume();if(!want&&AC.state==='running')AC.suspend()}
+['click','touchend'].forEach(function(ev){document.addEventListener(ev,function(){if(!AC){startMusic();syncMusic()}})});
+['play','playing'].forEach(function(ev){document.addEventListener(ev,function(e){if(e.target.tagName==='VIDEO'){vplaying.add(e.target);syncMusic()}},true)});
+['pause','ended'].forEach(function(ev){document.addEventListener(ev,function(e){if(e.target.tagName==='VIDEO'){vplaying.delete(e.target);syncMusic()}},true)});
+$('#mus').onclick=function(e){e.stopPropagation();if(!AC){startMusic();syncMusic();return}musicOn=!musicOn;this.textContent=musicOn?'🎵':'🔇';syncMusic()};
 function openLB(s){$('#lbimg').src=s;$('#lb').hidden=false}
 $('#lb').onclick=function(){this.hidden=true};
 var p=$('#polas');
