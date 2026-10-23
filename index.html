@@ -134,19 +134,64 @@ var msg='Wishing you a day as beautiful as you are 💖';var i=0;
 (function t(){if(i<=msg.length){$('#type').textContent=msg.slice(0,i++);setTimeout(t,60)}})();
 $('#party').onclick=function(){confetti(120);$('#cake').scrollIntoView({behavior:'smooth',block:'center'})};
 $('#again').onclick=function(){confetti(150)};
+
+/* ---------- FILE HELPERS ----------
+   Put files in the "media" folder as: video1.mp4 ... video7.mp4,
+   thumb1.jpg ... thumb7.jpg (optional), photo1.jpg ... photo7.jpg, wish.jpg.
+   Other common extensions / upper-case names are tried automatically. */
+var IMG_EXT=['jpg','jpeg','png','webp','JPG','JPEG','PNG'];
+var VID_EXT=['mp4','MP4','mov','MOV','webm','m4v'];
+function candidates(base,exts){return exts.map(function(e){return base+'.'+e})}
+// try each image candidate until one loads
+function loadFirstImg(list,ok){var k=0;(function next(){if(k>=list.length)return;var u=list[k++];var im=new Image();im.onload=function(){ok(u)};im.onerror=next;im.src=u})()}
+function loadImg(u,ok){var im=new Image();im.onload=function(){ok(u)};im.src=u}
+
 // friend videos (edit the names!)
 var friends=['Palak','Uday','Amisha','Mrinal','Vedika','Eashna','Prajjwal'];
 var vw=$('#vids');
-friends.forEach(function(n){var d=document.createElement('div');d.className='vcard';
-var b=document.createElement('button');b.className='vslot';b.innerHTML='🎥<br>Add '+n+'’s video';
-var f=document.createElement('input');f.type='file';f.accept='video/*';f.hidden=true;
-f.onchange=function(){var file=f.files[0];if(!file)return;var v=document.createElement('video');v.controls=true;v.playsInline=true;v.src=URL.createObjectURL(file);d.replaceChild(v,b)};
-var VSRC={};
-f.onclick=function(e){e.stopPropagation()};var vi=friends.indexOf(n)+1;
-loadImg('media/thumb'+vi+'.jpg',function(u){b.innerHTML='<span class="play">▶</span>';b.style.background='url('+u+') center/cover';VSRC[n]='media/video'+vi+'.mp4'});
-b.onclick=function(){if(VSRC[n]){var v=document.createElement('video');v.controls=true;v.playsInline=true;v.src=VSRC[n];d.replaceChild(v,b);v.play()}else{f.click()}};
-var c=document.createElement('div');c.className='cap';c.textContent='From '+n+' 💌';
-d.appendChild(b);d.appendChild(c);d.appendChild(f);vw.appendChild(d)});
+friends.forEach(function(n,idx){
+  var vi=idx+1;
+  var d=document.createElement('div');d.className='vcard';
+  var b=document.createElement('button');b.className='vslot';b.innerHTML='🎥<br>Add '+n+'’s video';
+  var f=document.createElement('input');f.type='file';f.accept='video/*';f.hidden=true;
+  f.onclick=function(e){e.stopPropagation()};
+  var vlist=candidates('media/video'+vi,VID_EXT);
+  var knownSrc=null;   // set once we confirm a video file exists
+
+  // user-uploaded file from the picker
+  f.onchange=function(){var file=f.files[0];if(!file)return;var v=document.createElement('video');v.controls=true;v.playsInline=true;v.src=URL.createObjectURL(file);d.replaceChild(v,b);v.play()};
+
+  // 1) Thumbnail is OPTIONAL and independent of the video
+  loadFirstImg(candidates('media/thumb'+vi,IMG_EXT),function(u){b.style.background='url('+u+') center/cover'});
+
+  // 2) Check the video file exists (independent of the thumbnail)
+  (function probe(k){
+    if(k>=vlist.length)return;
+    var pv=document.createElement('video');pv.preload='metadata';pv.muted=true;
+    var done=false;
+    function found(){if(done)return;done=true;knownSrc=vlist[k];b.innerHTML='<span class="play">▶</span>';pv.removeAttribute('src');pv.load()}
+    pv.onloadedmetadata=found;pv.onloadeddata=found;pv.oncanplay=found;
+    pv.onerror=function(){if(done)return;done=true;probe(k+1)};
+    pv.src=vlist[k];
+  })(0);
+
+  // 3) Click: play known video; otherwise try every candidate directly, then fall back to file picker
+  b.onclick=function(){
+    var list=knownSrc?[knownSrc]:vlist;var k=0;
+    var v=document.createElement('video');v.controls=true;v.playsInline=true;v.setAttribute('playsinline','');
+    v.onerror=function(){
+      if(k+1<list.length){k++;v.src=list[k];v.play().catch(function(){})}
+      else{d.replaceChild(b,v);f.click()}   // nothing found: let her pick a file
+    };
+    v.src=list[0];
+    d.replaceChild(v,b);
+    var p=v.play();if(p&&p.catch)p.catch(function(){});
+  };
+
+  var c=document.createElement('div');c.className='cap';c.textContent='From '+n+' 💌';
+  d.appendChild(b);d.appendChild(c);d.appendChild(f);vw.appendChild(d)
+});
+
 var shown=false;
 function showWish(){if(shown)return;shown=true;var r=$('#reveal');r.hidden=false;r.classList.add('show');confetti(150);r.scrollIntoView({behavior:'smooth',block:'center'})}
 $('#blow').onclick=function(){$('#cake').classList.add('out');$('#blow').disabled=true;confetti(60);
@@ -178,14 +223,13 @@ function syncMusic(){if(!AC)return;var want=musicOn&&vplaying.size===0;if(want&&
 ['play','playing'].forEach(function(ev){document.addEventListener(ev,function(e){if(e.target.tagName==='VIDEO'){vplaying.add(e.target);syncMusic()}},true)});
 ['pause','ended'].forEach(function(ev){document.addEventListener(ev,function(e){if(e.target.tagName==='VIDEO'){vplaying.delete(e.target);syncMusic()}},true)});
 $('#mus').onclick=function(e){e.stopPropagation();if(!AC){startMusic();syncMusic();return}musicOn=!musicOn;this.textContent=musicOn?'🎵':'🔇';syncMusic()};
-function loadImg(u,ok){var im=new Image();im.onload=function(){ok(u)};im.src=u}
 function openLB(s){$('#lbimg').src=s;$('#lb').hidden=false}
 $('#lb').onclick=function(){this.hidden=true};
-loadImg('media/wish.jpg',function(u){var w=$('#wph');w.textContent='';w.style.backgroundImage='url('+u+')';$('#wishframe').onclick=function(){openLB(u)}});
+loadFirstImg(candidates('media/wish',IMG_EXT),function(u){var w=$('#wph');w.textContent='';w.style.backgroundImage='url('+u+')';$('#wishframe').onclick=function(){openLB(u)}});
 var p=$('#polas');
 caps.forEach(function(cp,ix){var b=document.createElement('button');b.className='polaroid';
 b.innerHTML='<div class="ph">📷<br>Add photo</div><div class="cap">'+cp+'</div>';
-loadImg('media/photo'+(ix+1)+'.jpg',function(u){b.dataset.src=u;var ph=b.querySelector('.ph');ph.textContent='';ph.style.backgroundImage='url('+u+')'});
+loadFirstImg(candidates('media/photo'+(ix+1),IMG_EXT),function(u){b.dataset.src=u;var ph=b.querySelector('.ph');ph.textContent='';ph.style.backgroundImage='url('+u+')'});
 var f=document.createElement('input');f.type='file';f.accept='image/*';f.hidden=true;
 f.onchange=function(){var file=f.files[0];if(!file)return;var rd=new FileReader();rd.onload=function(){var ph=b.querySelector('.ph');b.dataset.src=rd.result;ph.textContent='';ph.style.backgroundImage='url('+rd.result+')'};rd.readAsDataURL(file)};
 f.onclick=function(e){e.stopPropagation()};b.onclick=function(){if(b.dataset.src){openLB(b.dataset.src)}else{f.click()}};b.appendChild(f);p.appendChild(b)});
